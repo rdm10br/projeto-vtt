@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    // "moduleResolution": "bundler",
+    // "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "baseUrl": "./client/src",
+    "paths": {
+      "@engine/*": ["engine/*"],
+      "@network/*": ["network/*"],
+    }
+  }
+}
