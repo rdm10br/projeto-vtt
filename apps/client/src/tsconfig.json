@@ -1,4 +1,5 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "target": "es2022",
     "module": "nodenext",
@@ -8,8 +9,13 @@
     "noEmit": true,
     "baseUrl": "./client/src",
     "paths": {
+      "@/*": ["src/*"],
+      "@shared/*": ["../../packages/shared/src/*"],
       "@engine/*": ["engine/*"],
       "@network/*": ["network/*"],
-    }
-  }
+    },
+    "composite": true
+  },
+  "include": ["src/**/*", "vite.config.ts"],
+  "exclude": ["node_modules", "dist"]
 }

@@ -3,6 +3,7 @@ import * as PIXI from "pixi.js";
 export class TokenManager {
   private tokens = new Map<string, PIXI.Graphics>();
   private layer: PIXI.Container;
+  private ids = new Map<PIXI.Graphics, string>();
 
   constructor(layer: PIXI.Container) {
     this.layer = layer;
@@ -20,6 +21,7 @@ export class TokenManager {
 
     this.layer.addChild(token);
     this.tokens.set(id, token);
+    this.ids.set(token, id);
 
     return token;
   }
@@ -34,5 +36,9 @@ export class TokenManager {
 
   get(id: string) {
     return this.tokens.get(id);
+  }
+
+  getId(token: PIXI.Graphics) {
+    return this.ids.get(token);
   }
 }

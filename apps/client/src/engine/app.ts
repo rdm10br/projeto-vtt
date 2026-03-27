@@ -13,7 +13,7 @@ export class App {
     await this.app.init({
       width: window.innerWidth,
       height: window.innerHeight,
-      backgroundColor: 0x1e1e1e,
+      backgroundColor: 0x666666,
       antialias: true,
     });
 
