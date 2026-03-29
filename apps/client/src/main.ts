@@ -16,7 +16,6 @@ const highlights = new Map<PIXI.Graphics, PIXI.Graphics>();
 
 grid.draw(window.innerWidth, window.innerHeight);
 
-// const token = tokens.create("t1", 100, 100);
 let selectedToken: PIXI.Graphics | null = null;
 
 const t1 = tokens.create("t1", 100, 100);
@@ -40,7 +39,6 @@ function createHighlight(token: PIXI.Graphics) {
 }
 
 [t1,t2,t3].forEach(token => {
-  // let token = tokens.getId(selectedToken)!;
   createHighlight(token);
   // --- DRAG ---
   let isDragging = false;
