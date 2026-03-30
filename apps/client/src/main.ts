@@ -13,10 +13,9 @@ const grid = new Grid(app.layers.grid);
 const tokens = new TokenManager(app.layers.tokens);
 const socket = new SocketManager("ws://localhost:3000");
 const highlights = new Map<PIXI.Graphics, PIXI.Graphics>();
+let selectedToken: PIXI.Graphics | null = null;
 
 grid.draw(window.innerWidth, window.innerHeight);
-
-let selectedToken: PIXI.Graphics | null = null;
 
 const t1 = tokens.create("t1", 100, 100);
 const t2 = tokens.create("t2", 200, 100);
@@ -44,8 +43,8 @@ function createHighlight(token: PIXI.Graphics) {
   let isDragging = false;
   let dragOffset = { x: 0, y: 0 };
 
-  token.eventMode = "static";
   token.cursor = "pointer";
+  token.eventMode = "static";
 
   token.on("pointerdown", (event) => {
     isDragging = true;
@@ -108,11 +107,10 @@ function createHighlight(token: PIXI.Graphics) {
 
   token.on("pointerup", stopDrag);
   token.on("pointerupoutside", stopDrag);
+});
 
-  // --- SOCKET ---
-  socket.connect((data) => {
-    if (data.type === "TOKEN_MOVE") {
-      tokens.move(data.payload.id, data.payload.x, data.payload.y);
-    }
-  });
+socket.connect((data) => {
+  if (data.type === "TOKEN_MOVE") {
+    tokens.move(data.payload.id, data.payload.x, data.payload.y);
+  }
 });

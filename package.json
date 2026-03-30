@@ -15,5 +15,12 @@
   "devDependencies": {
     "@types/node": "^25.5.0",
     "concurrently": "^9.2.1"
+  },
+  "dependencies": {
+    "fastify": "^5.8.4",
+    "pixi.js": "^8.17.1",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.3",
+    "ws": "^8.20.0"
   }
 }
