@@ -12,9 +12,7 @@ export class TokenManager {
   create(id: string, x: number, y: number) {
     const token = new PIXI.Graphics();
 
-    token.beginFill(0xffffff);
-    token.drawRect(0, 0, 50, 50);
-    token.endFill();
+    token.rect(0, 0, 50, 50).fill(0xffffff);
 
     token.x = x;
     token.y = y;

@@ -2,23 +2,27 @@
   "name": "projeto-vtt",
   "version": "0.0.01",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
-    "dev:server": "cd apps/server && node server.js",
+    "build:server": "cd apps/server && npm run build",
+    "dev:server": "cd apps/server && npm run build && npm run start",
     "dev:client": "cd apps/client && npm run dev"
   },
   "keywords": [],
-  "author": "",
+  "author": "Rafael Dias",
   "license": "ISC",
-  "description": "",
+  "description": "vtt project i guess",
   "devDependencies": {
     "@types/node": "^25.5.0",
     "concurrently": "^9.2.1"
   },
   "dependencies": {
+    "@types/ws": "^8.18.1",
     "fastify": "^5.8.4",
     "pixi.js": "^8.17.1",
+    "tsx": "^4.21.0",
     "typescript": "^6.0.2",
     "vite": "^8.0.3",
     "ws": "^8.20.0"

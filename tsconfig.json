@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "outDir": "./dist",
+    /* rootDir sobe para a raiz do monorepo para cobrir
+       tanto src/ quanto packages/protocol sem erros TS6059 */
+    "rootDir": "../../",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  /* include declara explicitamente quais arquivos compilar —
+     o tsc não vai tocar no resto do monorepo */
+  "include": [
+    "src/**/*",
+    "../../packages/protocol/**/*"
+  ],
+  "exclude": ["node_modules", "dist"]
+}
