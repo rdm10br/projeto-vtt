@@ -10,9 +10,12 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "paths": {
-      "@packages": ["../../../packages/*"]
+      "@packages": ["./packages/*"]
     }
   },
-  "include": ["src/**/*"],
+  "include": [
+    "src/**/*",
+    "../../packages/**/*"
+  ],
   "exclude": ["node_modules", "dist"]
 }

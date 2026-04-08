@@ -6,7 +6,7 @@
     "outDir": "./dist",
     /* rootDir sobe para a raiz do monorepo para cobrir
        tanto src/ quanto packages/protocol sem erros TS6059 */
-    "rootDir": "../../",
+    "rootDir": "./",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -16,7 +16,7 @@
      o tsc não vai tocar no resto do monorepo */
   "include": [
     "src/**/*",
-    "../../packages/protocol/**/*"
+    "./packages/**/*"
   ],
   "exclude": ["node_modules", "dist"]
 }
