@@ -1,7 +1,7 @@
 import Fastify from "fastify";
 import { WebSocketServer, WebSocket } from "ws";
-import type { Message } from "@packages/protocol";
-// import type { Message } from "../../../packages/protocol";
+// import type { Message } from "@packages/protocol";
+import type { Message } from "../../../packages/protocol";
 
 const app = Fastify();
 
