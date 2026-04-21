@@ -16,7 +16,8 @@
   "description": "vtt project i guess",
   "devDependencies": {
     "@types/node": "^25.5.0",
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "vite-tsconfig-paths": "^6.1.1"
   },
   "dependencies": {
     "@types/ws": "^8.18.1",

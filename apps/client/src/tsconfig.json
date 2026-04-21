@@ -1,5 +1,5 @@
 {
-  "extends": "../../tsconfig.base.json",
+  // "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "target": "es2022",
     "module": "nodenext",
@@ -7,15 +7,18 @@
     // "moduleResolution": "bundler",
     // "allowImportingTsExtensions": true,
     "noEmit": true,
-    "baseUrl": "./client/src",
+    "rootDir": "../../",
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
     "paths": {
-      "@/*": ["src/*"],
+      "@src/*": ["src/*"],
       "@shared/*": ["../../packages/shared/src/*"],
       "@engine/*": ["engine/*"],
       "@network/*": ["network/*"],
+      // "@protocol/*": ["../../../packages/protocol/index.ts"]
     },
     "composite": true
   },
-  "include": ["src/**/*", "vite.config.ts"],
+  "include": ["src/**/*", "../vite.config.ts"],
   "exclude": ["node_modules", "dist"]
 }
