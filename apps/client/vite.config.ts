@@ -18,16 +18,19 @@
 // })
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import tsconfigPaths from 'vite-tsconfig-paths';
+// import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
   plugins: [
     react(),
     // O plugin lerá o tsconfig.json local e resolverá os caminhos
-    tsconfigPaths({
-      projects: ['./tsconfig.json']
-    })
+    // tsconfigPaths({
+    //   projects: ['./tsconfig.json']
+    // })
   ],
+  resolve: {
+    tsconfigPaths: true,
+  },
   build: {
     // Garantir que o diretório de saída esteja correto no monorepo
     outDir: 'dist',

@@ -39,4 +39,14 @@ export class TokenManager {
   getId(token: PIXI.Graphics) {
     return this.ids.get(token);
   }
+
+  clear() {
+    // Remove todos os tokens do layer e limpa os maps
+    this.tokens.forEach((graphic) => {
+      this.layer.removeChild(graphic);
+      graphic.destroy();
+    });
+    this.tokens.clear();
+    this.ids.clear();
+  }
 }
