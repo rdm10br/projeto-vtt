@@ -51,6 +51,7 @@ export type SessionJoinedPayload = {
   invite_codes: InviteCodeSummary[];
   scenes: Scene[];
   active_scene_id: string;
+  chat: ChatMessage[];
 };
 
 export type CreateInvitePayload = {
@@ -58,6 +59,27 @@ export type CreateInvitePayload = {
   role: Role;
   max_uses?: number;
   expires_at?: number;
+};
+
+export type RollDetails = {
+  dice: string;
+  modifier: number;
+  attribute?: string;
+  advantage?: boolean;
+  disadvantage?: boolean;
+  results: number[];
+  total: number;
+};
+
+export type ChatMessage = {
+  sender: string;
+  text: string;
+  timestamp: number;
+  message_type?: "text" | "roll" | "whisper" | "secret" | "system";
+  target?: string;
+  roll_details?: RollDetails;
+  visible_to?: "all" | "gm" | "sender" | "target" | "sender-target";
+  metadata?: Record<string, unknown>;
 };
 
 // --- Mensagens Client → Server ---
@@ -75,7 +97,8 @@ export type ClientMessage =
   | { type: "SCENE_PUSH"; payload: { scene_id: string } }
   | { type: "SCENE_SET_VISIBLE"; payload: { scene_id: string; visible: boolean } }
   | { type: "TOKEN_CREATE_REQUEST"; payload: { scene_id: string; x: number; y: number } }
-  | { type: "TOKEN_MOVE"; payload: { id: string; x: number; y: number } };
+  | { type: "TOKEN_MOVE"; payload: { id: string; x: number; y: number } }
+  | { type: "CHAT_SEND"; payload: { text: string } };
 
 // --- Mensagens Server → Client ---
 
@@ -92,6 +115,7 @@ export type ServerMessage =
   | { type: "SCENE_PUSHED"; payload: { scene_id: string } }
   | { type: "SCENE_VISIBILITY_CHANGED"; payload: { scene_id: string; visible: boolean } }
   | { type: "TOKEN_CREATE"; payload: { id: string; scene_id: string; x: number; y: number } }
-  | { type: "TOKEN_MOVE"; payload: { id: string; x: number; y: number } };
+  | { type: "TOKEN_MOVE"; payload: { id: string; x: number; y: number } }
+  | { type: "CHAT_RECEIVE"; payload: ChatMessage };
 
 export type Message = ClientMessage | ServerMessage;

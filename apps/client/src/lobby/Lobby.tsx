@@ -232,7 +232,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   tabActive: {
     background: "rgba(170, 59, 255, 0.15)",
-    borderColor: "rgba(170, 59, 255, 0.5)",
+    border: "1px solid rgba(170, 59, 255, 0.5)",
     color: "#c084fc",
   },
   field: {

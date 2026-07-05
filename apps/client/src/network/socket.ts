@@ -12,6 +12,7 @@ export class SocketManager {
     this.socket.onopen = () => console.log("Conectado ao servidor");
     this.socket.onmessage = (event) => {
       const data = JSON.parse(event.data) as ServerMessage;
+      console.debug("WS recv:", data.type, (data as any).payload ?? "");
       onMessage(data);
     };
   }

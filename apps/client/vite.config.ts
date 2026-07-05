@@ -34,5 +34,10 @@ export default defineConfig({
   build: {
     // Garantir que o diretório de saída esteja correto no monorepo
     outDir: 'dist',
-  }
+  },
+  // test: {
+    // globals: true,
+    // environment: 'jsdom',
+    // setupFiles: 'src/__tests__/setup.ts',
+  // }
 });

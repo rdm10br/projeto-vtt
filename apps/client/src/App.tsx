@@ -3,7 +3,7 @@ import { Login } from "./lobby/Login";
 import { Lobby } from "./lobby/Lobby";
 import { SessionInfo } from "./lobby/SessionInfo";
 import { SocketManager } from "./network/socket";
-import type { InviteCodeSummary, Role, ServerMessage  } from "../../../packages/protocol/index.ts";
+import type { ChatMessage, InviteCodeSummary, Role, ServerMessage  } from "../../../packages/protocol/index.ts";
 
 type Screen = "login" | "lobby" | "game";
 
@@ -19,6 +19,7 @@ type SessionData = {
   nickname: string;
   role: Role;
   invite_codes: InviteCodeSummary[];
+  chat?: ChatMessage[];
 };
 
 const NICKNAME_KEY = "vtt_nickname";
@@ -69,7 +70,7 @@ export function App({ socket, onSessionJoined }: AppProps) {
       }
 
       if (data.type === "SESSION_JOINED") {
-        const { session_id, session_name, member, invite_codes, scenes, active_scene_id } = data.payload;
+        const { session_id, session_name, member, invite_codes, scenes, active_scene_id, chat } = data.payload;
 
         setSession({
           session_id,
@@ -77,6 +78,7 @@ export function App({ socket, onSessionJoined }: AppProps) {
           nickname: member.nickname || user?.nickname || "",
           role: member.role,
           invite_codes,
+          chat,
         });
 
         setScreen("game");
@@ -95,6 +97,31 @@ export function App({ socket, onSessionJoined }: AppProps) {
 
       if (data.type === "SESSION_ERROR") {
         setSessionError(data.payload.message);
+        return;
+      }
+
+      if (data.type === "INVITE_CREATED") {
+        setSession((prev) => {
+          if (!prev) return prev;
+          return { ...prev, invite_codes: [...prev.invite_codes, data.payload] };
+        });
+        return;
+      }
+
+      if (data.type === "INVITE_DELETED") {
+        setSession((prev) => {
+          if (!prev) return prev;
+          return { ...prev, invite_codes: prev.invite_codes.filter((c) => c.code !== data.payload.code) };
+        });
+        return;
+      }
+
+      if (data.type === "CHAT_RECEIVE") {
+        setSession((prev) => {
+          if (!prev) return prev;
+          const msgs = prev.chat ? [...prev.chat, data.payload] : [data.payload];
+          return { ...prev, chat: msgs };
+        });
         return;
       }
 
@@ -139,10 +166,13 @@ export function App({ socket, onSessionJoined }: AppProps) {
   if (screen === "game" && session) {
     return (
       <SessionInfo
+        session_id={session.session_id}
         sessionName={session.session_name}
         nickname={session.nickname}
         role={session.role}
         invite_codes={session.invite_codes}
+        socket={socket}
+        chat={session.chat}
       />
     );
   }
