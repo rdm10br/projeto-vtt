@@ -1,40 +1,75 @@
 import { useState } from "react";
-// import type { InviteCodes } from "../../../../packages/protocol/index.ts";
+import type { Role } from "../../../../packages/protocol/index.ts";
+
+type Tab = "create" | "join";
 
 type LobbyProps = {
-  initialCode?: string;
+  nickname: string;
+  sessions: { id: string; name: string; owner_id: string; role: Role }[];
   serverError?: string | null;
-  onSessionCreated: (name: string, nickname: string) => void;
-  onSessionEntered: (code: string, nickname: string) => void;
+  onSessionCreate: (name: string) => void;
+  onSessionJoin: (code: string) => void;
+  onSessionEnter: (session_id: string) => void;
 };
 
-type Tab = "create" | "enter";
-
-export function Lobby({ initialCode, serverError, onSessionCreated, onSessionEntered }: LobbyProps) {
+export function Lobby({
+  nickname,
+  sessions,
+  serverError,
+  onSessionCreate,
+  onSessionJoin,
+  onSessionEnter,
+}: LobbyProps) {
   const [tab, setTab] = useState<Tab>("create");
-  const [nickname, setNickname] = useState("");
   const [sessionName, setSessionName] = useState("");
-  const [code, setCode] = useState<string>(initialCode ?? "");
+  const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   function handleCreate() {
-    if (!nickname.trim()) { setError("Digite seu apelido."); return; }
     if (!sessionName.trim()) { setError("Digite o nome da sessão."); return; }
     setError(null);
-    onSessionCreated(sessionName.trim(), nickname.trim());
+    onSessionCreate(sessionName.trim());
+    setSessionName("");
   }
 
-  function handleEnter() {
-    if (!nickname.trim()) { setError("Digite seu apelido."); return; }
+  function handleJoin() {
     if (!code.trim()) { setError("Digite o código de convite."); return; }
     setError(null);
-    onSessionEntered(code.trim().toUpperCase(), nickname.trim());
+    onSessionJoin(code.trim().toUpperCase());
+    setCode("");
   }
 
   return (
     <div style={styles.overlay}>
       <div style={styles.card}>
-        <h1 style={styles.title}>⚔️ VTT</h1>
+        <div style={styles.header}>
+          <h1 style={styles.title}>⚔️ VTT</h1>
+          <span style={styles.nickname}>Olá, {nickname}</span>
+        </div>
+
+        {/* Sessões existentes */}
+        {sessions.length > 0 && (
+          <div style={styles.section}>
+            <p style={styles.sectionTitle}>Suas sessões</p>
+            <div style={styles.sessionList}>
+              {sessions.map((s) => (
+                <button
+                  key={s.id}
+                  style={styles.sessionRow}
+                  onClick={() => onSessionEnter(s.id)}
+                >
+                  <span style={styles.sessionName}>{s.name}</span>
+                  <span style={{
+                    ...styles.badge,
+                    ...(s.role === "gm" ? styles.badgeGm : styles.badgePlayer)
+                  }}>
+                    {s.role === "gm" ? "GM" : "Player"}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <div style={styles.tabs}>
@@ -45,23 +80,11 @@ export function Lobby({ initialCode, serverError, onSessionCreated, onSessionEnt
             Criar sessão
           </button>
           <button
-            style={{ ...styles.tab, ...(tab === "enter" ? styles.tabActive : {}) }}
-            onClick={() => { setTab("enter"); setError(null); }}
+            style={{ ...styles.tab, ...(tab === "join" ? styles.tabActive : {}) }}
+            onClick={() => { setTab("join"); setError(null); }}
           >
-            Entrar em sessão
+            Entrar com código
           </button>
-        </div>
-
-        {/* Campos comuns */}
-        <div style={styles.field}>
-          <label style={styles.label}>Seu apelido</label>
-          <input
-            style={styles.input}
-            placeholder="Como quer ser chamado?"
-            value={nickname}
-            onChange={(e) => setNickname(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && (tab === "create" ? handleCreate() : handleEnter())}
-          />
         </div>
 
         {tab === "create" && (
@@ -77,7 +100,7 @@ export function Lobby({ initialCode, serverError, onSessionCreated, onSessionEnt
           </div>
         )}
 
-        {tab === "enter" && (
+        {tab === "join" && (
           <div style={styles.field}>
             <label style={styles.label}>Código de convite</label>
             <input
@@ -86,7 +109,7 @@ export function Lobby({ initialCode, serverError, onSessionCreated, onSessionEnt
               value={code}
               maxLength={6}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
-              onKeyDown={(e) => e.key === "Enter" && handleEnter()}
+              onKeyDown={(e) => e.key === "Enter" && handleJoin()}
             />
           </div>
         )}
@@ -97,7 +120,7 @@ export function Lobby({ initialCode, serverError, onSessionCreated, onSessionEnt
 
         <button
           style={styles.btn}
-          onClick={tab === "create" ? handleCreate : handleEnter}
+          onClick={tab === "create" ? handleCreate : handleJoin}
         >
           {tab === "create" ? "Criar e entrar" : "Entrar"}
         </button>
@@ -106,7 +129,6 @@ export function Lobby({ initialCode, serverError, onSessionCreated, onSessionEnt
   );
 }
 
-// --- Estilos inline para não depender de CSS externo ainda ---
 const styles: Record<string, React.CSSProperties> = {
   overlay: {
     position: "fixed",
@@ -124,17 +146,75 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "12px",
     padding: "40px",
     width: "100%",
-    maxWidth: "400px",
+    maxWidth: "420px",
     display: "flex",
     flexDirection: "column",
     gap: "20px",
   },
+  header: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   title: {
     margin: 0,
     color: "#f3f4f6",
-    fontSize: "28px",
+    fontSize: "24px",
     fontWeight: 600,
-    textAlign: "center",
+  },
+  nickname: {
+    color: "#9ca3af",
+    fontSize: "14px",
+  },
+  section: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  },
+  sectionTitle: {
+    margin: 0,
+    color: "#9ca3af",
+    fontSize: "12px",
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+  },
+  sessionList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "6px",
+  },
+  sessionRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "10px 14px",
+    background: "#16171d",
+    border: "1px solid #2e303a",
+    borderRadius: "8px",
+    cursor: "pointer",
+    color: "#f3f4f6",
+    fontSize: "14px",
+    transition: "border-color 0.15s",
+  },
+  sessionName: {
+    color: "#f3f4f6",
+    fontSize: "14px",
+  },
+  badge: {
+    borderRadius: "4px",
+    padding: "2px 8px",
+    fontSize: "11px",
+    fontWeight: 600,
+  },
+  badgeGm: {
+    background: "rgba(170,59,255,0.15)",
+    border: "1px solid rgba(170,59,255,0.4)",
+    color: "#c084fc",
+  },
+  badgePlayer: {
+    background: "rgba(59,130,246,0.15)",
+    border: "1px solid rgba(59,130,246,0.4)",
+    color: "#93c5fd",
   },
   tabs: {
     display: "flex",
@@ -149,7 +229,6 @@ const styles: Record<string, React.CSSProperties> = {
     color: "#9ca3af",
     cursor: "pointer",
     fontSize: "14px",
-    transition: "all 0.15s",
   },
   tabActive: {
     background: "rgba(170, 59, 255, 0.15)",

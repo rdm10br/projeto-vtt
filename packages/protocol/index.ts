@@ -1,10 +1,4 @@
-// Tipos de mensagens trocadas entre client e server.
-// Importado pelos dois lados — qualquer mudança aqui gera erro de compilação
-// em ambos simultaneamente.
-
-// --- Entidades ---
-
-export type Role = "gm" | "player";
+export type Role = "gm" | "player" | "viewer";
 
 export type Token = {
   id: string;
@@ -18,6 +12,22 @@ export type Scene = {
   is_visible: boolean;
 };
 
+export type SessionSummary = {
+  id: string;
+  name: string;
+  owner_id: string;
+  role: Role;
+};
+
+export type InviteCodeSummary = {
+  code: string;
+  role: Role;
+  use_count: number;
+  max_uses: number | null;
+  expires_at: number | null;
+  created_at: number;
+};
+
 export type InviteCodes = {
   player: string;
   gm: string;
@@ -29,99 +39,59 @@ export type Member = {
   role: Role;
 };
 
-export type SessionJoinedPayload = {
-  session_id: string;
-  session_name: string;
-  member: Member;
-  invite_codes: InviteCodes;  // só populado para GMs
-  scenes: Scene[];
-  active_scene_id: string;
-};
-
-export type SessionState = {
-  session_id: string;
-  scenes: Scene[];
-  active_scene_id: string;
-};
-
 export type SceneState = {
   scene_id: string;
   tokens: Token[];
 };
 
-// --- Payloads Client → Server ---
-
-export type SessionCreatePayload = {
-  name: string;       // nome da sessão
-  nickname: string;   // apelido do GM criador
+export type SessionJoinedPayload = {
+  session_id: string;
+  session_name: string;
+  member: Member;
+  invite_codes: InviteCodeSummary[];
+  scenes: Scene[];
+  active_scene_id: string;
 };
 
-export type SessionEnterPayload = {
-  code: string;       // código de convite
-  nickname: string;   // apelido do jogador
-};
-
-export type CreateScenePayload = {
-  name: string;
-};
-
-export type SwitchScenePayload = {
-  scene_id: string;
-};
-
-export type PushScenePayload = {
-  scene_id: string;
-};
-
-export type SetSceneVisibilityPayload = {
-  scene_id: string;
-  visible: boolean;
-};
-
-export type TokenCreateRequestPayload = {
-  scene_id: string;
-  x: number;
-  y: number;
-};
-
-export type TokenMovePayload = {
-  id: string;
-  x: number;
-  y: number;
-};
-
-export type TokenCreatePayload = {
-  id: string;
-  scene_id: string;
-  x: number;
-  y: number;
+export type CreateInvitePayload = {
+  session_id: string;
+  role: Role;
+  max_uses?: number;
+  expires_at?: number;
 };
 
 // --- Mensagens Client → Server ---
 
 export type ClientMessage =
   | { type: "PING"; payload: string }
-  | { type: "SESSION_CREATE"; payload: SessionCreatePayload }
-  | { type: "SESSION_ENTER"; payload: SessionEnterPayload }
-  | { type: "SCENE_CREATE"; payload: CreateScenePayload }
-  | { type: "SCENE_SWITCH"; payload: SwitchScenePayload }
-  | { type: "SCENE_PUSH"; payload: PushScenePayload }
-  | { type: "SCENE_SET_VISIBLE"; payload: SetSceneVisibilityPayload }
-  | { type: "TOKEN_CREATE_REQUEST"; payload: TokenCreateRequestPayload }
-  | { type: "TOKEN_MOVE"; payload: TokenMovePayload };
+  | { type: "USER_LOGIN"; payload: { nickname: string } }
+  | { type: "SESSION_CREATE"; payload: { name: string } }
+  | { type: "SESSION_JOIN"; payload: { code: string } }
+  | { type: "SESSION_ENTER"; payload: { session_id: string } }
+  | { type: "INVITE_CREATE"; payload: CreateInvitePayload }
+  | { type: "INVITE_DELETE"; payload: { code: string } }
+  | { type: "SCENE_CREATE"; payload: { name: string } }
+  | { type: "SCENE_SWITCH"; payload: { scene_id: string } }
+  | { type: "SCENE_PUSH"; payload: { scene_id: string } }
+  | { type: "SCENE_SET_VISIBLE"; payload: { scene_id: string; visible: boolean } }
+  | { type: "TOKEN_CREATE_REQUEST"; payload: { scene_id: string; x: number; y: number } }
+  | { type: "TOKEN_MOVE"; payload: { id: string; x: number; y: number } };
 
 // --- Mensagens Server → Client ---
 
 export type ServerMessage =
   | { type: "CONNECTED" }
+  | { type: "USER_STATE"; payload: { user_id: string; nickname: string; sessions: SessionSummary[] } }
+  | { type: "USER_ERROR"; payload: { message: string } }
   | { type: "SESSION_JOINED"; payload: SessionJoinedPayload }
   | { type: "SESSION_ERROR"; payload: { message: string } }
-  | { type: "SCENE_STATE"; payload: SceneState }
+  | { type: "INVITE_CREATED"; payload: InviteCodeSummary }
+  | { type: "INVITE_DELETED"; payload: { code: string } }
   | { type: "SCENE_CREATED"; payload: Scene }
-  | { type: "SCENE_PUSHED"; payload: PushScenePayload }
-  | { type: "SCENE_VISIBILITY_CHANGED"; payload: SetSceneVisibilityPayload }
-  | { type: "TOKEN_CREATE"; payload: TokenCreatePayload }
-  | { type: "TOKEN_MOVE"; payload: TokenMovePayload };
+  | { type: "SCENE_STATE"; payload: SceneState }
+  | { type: "SCENE_PUSHED"; payload: { scene_id: string } }
+  | { type: "SCENE_VISIBILITY_CHANGED"; payload: { scene_id: string; visible: boolean } }
+  | { type: "TOKEN_CREATE"; payload: { id: string; scene_id: string; x: number; y: number } }
+  | { type: "TOKEN_MOVE"; payload: { id: string; x: number; y: number } };
 
-// Union dos dois lados — útil para parsing genérico
 export type Message = ClientMessage | ServerMessage;

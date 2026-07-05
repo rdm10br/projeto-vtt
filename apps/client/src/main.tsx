@@ -159,7 +159,7 @@ root.render(
   <StrictMode>
     <App
       socket={socket}
-      onSessionJoined={(_session_id, _nickname, _role: Role) => {
+      onSessionJoined={(_session_id, _role: Role) => {
         createBtn.style.display = "block";
       }}
     />

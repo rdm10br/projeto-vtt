@@ -1,83 +1,86 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { Login } from "./lobby/Login";
 import { Lobby } from "./lobby/Lobby";
 import { SessionInfo } from "./lobby/SessionInfo";
 import { SocketManager } from "./network/socket";
-import type { InviteCodes, Role, ServerMessage } from "../../../packages/protocol/index.ts";
+import type { InviteCodeSummary, Role, ServerMessage  } from "../../../packages/protocol/index.ts";
+
+type Screen = "login" | "lobby" | "game";
+
+type UserData = {
+  user_id: string;
+  nickname: string;
+  sessions: { id: string; name: string; owner_id: string; role: Role }[];
+};
 
 type SessionData = {
   session_id: string;
   session_name: string;
   nickname: string;
   role: Role;
-  invite_codes: InviteCodes;
-  used_code: string;  // código usado para entrar — permite reentrada
+  invite_codes: InviteCodeSummary[];
 };
 
-const SESSION_KEY = "vtt_session";
-
-function loadSavedSession(): SessionData | null {
-  try {
-    const raw = sessionStorage.getItem(SESSION_KEY);
-    return raw ? (JSON.parse(raw) as SessionData) : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveSession(data: SessionData) {
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(data));
-}
-
-function clearSession() {
-  sessionStorage.removeItem(SESSION_KEY);
-}
+const NICKNAME_KEY = "vtt_nickname";
 
 type AppProps = {
   socket: SocketManager;
-  onSessionJoined: (session_id: string, nickname: string, role: Role) => void;
+  onSessionJoined: (session_id: string, role: Role) => void;
 };
 
 export function App({ socket, onSessionJoined }: AppProps) {
+  const [screen, setScreen] = useState<Screen>("login");
+  const [user, setUser] = useState<UserData | null>(null);
   const [session, setSession] = useState<SessionData | null>(null);
-  const [serverError, setServerError] = useState<string | null>(null);
+  const [userError, setUserError] = useState<string | null>(null);
+  const [sessionError, setSessionError] = useState<string | null>(null);
 
-  const pendingCode = useRef<string>("");
   const joinCodeFromUrl = new URLSearchParams(window.location.search).get("join");
 
   useEffect(() => {
     socket.connect((data: ServerMessage) => {
       if (data.type === "CONNECTED") {
-        // Tenta reentrar na sessão salva automaticamente
-        const saved = loadSavedSession();
+        // Tenta relogar automaticamente com nickname salvo
+        const saved = localStorage.getItem(NICKNAME_KEY);
         if (saved) {
-          socket.send({
-            type: "SESSION_ENTER",
-            payload: { code: saved.used_code, nickname: saved.nickname },
-          });
+          socket.send({ type: "USER_LOGIN", payload: { nickname: saved } });
         }
         return;
       }
-      
+
+      if (data.type === "USER_STATE") {
+        const { user_id, nickname, sessions } = data.payload;
+        localStorage.setItem(NICKNAME_KEY, nickname);
+        setUser({ user_id, nickname, sessions });
+
+        // Se veio via link de convite, entra direto
+        if (joinCodeFromUrl) {
+          socket.send({ type: "SESSION_JOIN", payload: { code: joinCodeFromUrl } });
+          return;
+        }
+
+        setScreen("lobby");
+        return;
+      }
+
+      if (data.type === "USER_ERROR") {
+        setUserError(data.payload.message);
+        return;
+      }
+
       if (data.type === "SESSION_JOINED") {
         const { session_id, session_name, member, invite_codes, scenes, active_scene_id } = data.payload;
 
-        const usedCode =
-        member.role === "gm"
-          ? invite_codes.gm        // GM usa o próprio código GM para reentrar
-          : pendingCode.current;
-
-        const sessionData: SessionData = {
+        setSession({
           session_id,
           session_name,
-          nickname: member.nickname,
+          nickname: member.nickname || user?.nickname || "",
           role: member.role,
           invite_codes,
-          used_code: usedCode,
-        };
+        });
 
-        saveSession(sessionData);
-        setSession(sessionData);
-        onSessionJoined(session_id, member.nickname, member.role);
+        setScreen("game");
+        onSessionJoined(session_id, member.role);
 
         if (scenes.length === 0 && member.role === "gm") {
           socket.send({ type: "SCENE_CREATE", payload: { name: "Cena 1" } });
@@ -91,9 +94,7 @@ export function App({ socket, onSessionJoined }: AppProps) {
       }
 
       if (data.type === "SESSION_ERROR") {
-        // Se falhou ao reentrar automaticamente, limpa o save e mostra o lobby
-        clearSession();
-        setServerError(data.payload.message);
+        setSessionError(data.payload.message);
         return;
       }
 
@@ -101,30 +102,50 @@ export function App({ socket, onSessionJoined }: AppProps) {
     });
   }, []);
 
-  if (!session) {
+  if (screen === "login") {
     return (
-      <Lobby
-        initialCode={joinCodeFromUrl ?? ""}
-        serverError={serverError}
-        onSessionCreated={(name, nickname) => {
-          setServerError(null);
-          socket.send({ type: "SESSION_CREATE", payload: { name, nickname } });
-        }}
-        onSessionEntered={(code, nickname) => {
-          pendingCode.current = code;
-          setServerError(null);
-          socket.send({ type: "SESSION_ENTER", payload: { code, nickname } });
+      <Login
+        error={userError}
+        onLogin={(nickname) => {
+          setUserError(null);
+          socket.send({ type: "USER_LOGIN", payload: { nickname } });
         }}
       />
     );
   }
 
-  return (
-    <SessionInfo
-      sessionName={session.session_name}
-      nickname={session.nickname}
-      role={session.role}
-      invite_codes={session.invite_codes}
-    />
-  );
+  if (screen === "lobby" && user) {
+    return (
+      <Lobby
+        nickname={user.nickname}
+        sessions={user.sessions}
+        serverError={sessionError}
+        onSessionCreate={(name) => {
+          setSessionError(null);
+          socket.send({ type: "SESSION_CREATE", payload: { name } });
+        }}
+        onSessionJoin={(code) => {
+          setSessionError(null);
+          socket.send({ type: "SESSION_JOIN", payload: { code } });
+        }}
+        onSessionEnter={(session_id) => {
+          setSessionError(null);
+          socket.send({ type: "SESSION_ENTER", payload: { session_id } });
+        }}
+      />
+    );
+  }
+
+  if (screen === "game" && session) {
+    return (
+      <SessionInfo
+        sessionName={session.session_name}
+        nickname={session.nickname}
+        role={session.role}
+        invite_codes={session.invite_codes}
+      />
+    );
+  }
+
+  return null;
 }

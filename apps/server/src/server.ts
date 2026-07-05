@@ -1,9 +1,16 @@
 import Fastify from "fastify";
 import { WebSocketServer, WebSocket } from "ws";
-import type { ClientMessage, ServerMessage } from "../../../packages/protocol";
+import type { ClientMessage, ServerMessage, InviteCodeSummary } from "../../../packages/protocol";
 import {
-  createSession,
+  getUserById,
+  getUserByNickname,
+  createUser,
   getSession,
+  getSessionByName,
+  createSession,
+  getSessionsForUser,
+  getMembership,
+  createMembership,
   getScenesForSession,
   getVisibleScenes,
   createScene,
@@ -15,16 +22,19 @@ import {
   createInviteCode,
   getInviteCode,
   getInviteCodesForSession,
-  createMember,
+  useInviteCode,
+  deleteInviteCode,
+  type Role,
 } from "./db.js";
 
 const app = Fastify();
 
-// --- Estado em memória por conexão ---
 type ClientState = {
   ws: WebSocket;
+  user_id: string | null;
+  nickname: string;
   session_id: string | null;
-  role: "gm" | "player";
+  role: Role;
   scene_id: string | null;
 };
 
@@ -66,6 +76,19 @@ function broadcastToSession(
   }
 }
 
+// Converte InviteCode do banco para o formato do protocol
+function toInviteSummary(inv: ReturnType<typeof getInviteCode>): InviteCodeSummary | null {
+  if (!inv) return null;
+  return {
+    code: inv.code,
+    role: inv.role,
+    use_count: inv.use_count,
+    max_uses: inv.max_uses,
+    expires_at: inv.expires_at,
+    created_at: inv.created_at,
+  };
+}
+
 app.get("/", async () => ({ status: "ok" }));
 
 const start = async () => {
@@ -80,6 +103,8 @@ const start = async () => {
 
     const state: ClientState = {
       ws,
+      user_id: null,
+      nickname: "",
       session_id: null,
       role: "player",
       scene_id: null,
@@ -101,18 +126,45 @@ const start = async () => {
 
       console.log("Mensagem recebida:", data.type);
 
-      // --- SESSION_CREATE (GM cria uma sessão nova) ---
+      // --- USER_LOGIN ---
+      if (data.type === "USER_LOGIN") {
+        const { nickname } = data.payload;
+
+        if (!nickname.trim()) {
+          send(ws, { type: "USER_ERROR", payload: { message: "Apelido inválido." } });
+          return;
+        }
+
+        let user = getUserByNickname(nickname.trim());
+        if (!user) user = createUser(nickname.trim());
+
+        state.user_id = user.id;
+        state.nickname = user.nickname;
+
+        const sessions = getSessionsForUser(user.id);
+        send(ws, {
+          type: "USER_STATE",
+          payload: { user_id: user.id, nickname: user.nickname, sessions },
+        });
+        return;
+      }
+
+      if (!state.user_id) {
+        console.warn("Mensagem sem login, ignorando.");
+        return;
+      }
+
+      // --- SESSION_CREATE ---
       if (data.type === "SESSION_CREATE") {
-        const { name, nickname } = data.payload;
+        const { name } = data.payload;
 
-        const session = createSession(name);
+        if (getSessionByName(name.trim())) {
+          send(ws, { type: "SESSION_ERROR", payload: { message: "Já existe uma sessão com esse nome." } });
+          return;
+        }
 
-        // Cria os dois códigos de convite
-        const playerCode = createInviteCode(session.id, "player");
-        const gmCode = createInviteCode(session.id, "gm");
-
-        // Registra o GM criador como membro
-        const member = createMember(session.id, nickname, "gm");
+        const session = createSession(name.trim(), state.user_id);
+        const membership = createMembership(state.user_id, session.id, "gm");
 
         state.session_id = session.id;
         state.role = "gm";
@@ -122,8 +174,8 @@ const start = async () => {
           payload: {
             session_id: session.id,
             session_name: session.name,
-            member: { id: member.id, nickname, role: "gm" },
-            invite_codes: { player: playerCode, gm: gmCode },
+            member: { id: membership.id, nickname: state.nickname, role: "gm" },
+            invite_codes: [],
             scenes: [],
             active_scene_id: "",
           },
@@ -131,74 +183,157 @@ const start = async () => {
         return;
       }
 
-      // --- SESSION_ENTER (jogador entra com código de convite) ---
-      if (data.type === "SESSION_ENTER") {
-        const { code, nickname } = data.payload;
+      // --- SESSION_JOIN (via código de convite) ---
+      if (data.type === "SESSION_JOIN") {
+        const { code } = data.payload;
 
         const invite = getInviteCode(code.toUpperCase());
         if (!invite) {
-          send(ws, {
-            type: "SESSION_ERROR",
-            payload: { message: "Código de convite inválido." },
-          });
+          send(ws, { type: "SESSION_ERROR", payload: { message: "Código de convite inválido." } });
+          return;
+        }
+
+        // Valida expiração e usos
+        const now = Math.floor(Date.now() / 1000);
+        if (invite.expires_at && invite.expires_at < now) {
+          send(ws, { type: "SESSION_ERROR", payload: { message: "Código de convite expirado." } });
+          return;
+        }
+        if (invite.max_uses !== null && invite.use_count >= invite.max_uses) {
+          send(ws, { type: "SESSION_ERROR", payload: { message: "Código de convite esgotado." } });
           return;
         }
 
         const session = getSession(invite.session_id);
         if (!session) {
-          send(ws, {
-            type: "SESSION_ERROR",
-            payload: { message: "Sessão não encontrada." },
-          });
+          send(ws, { type: "SESSION_ERROR", payload: { message: "Sessão não encontrada." } });
           return;
         }
 
-        const member = createMember(session.id, nickname, invite.role);
+        // Se já é membro, apenas entra sem criar membership nova
+        const existing = getMembership(state.user_id, session.id);
+        const membership = existing ?? createMembership(state.user_id, session.id, invite.role);
+
+        if (!existing) useInviteCode(code.toUpperCase());
 
         state.session_id = session.id;
-        state.role = invite.role;
+        state.role = membership.role;
 
-        const scenes =
-          invite.role === "gm"
-            ? getScenesForSession(session.id)
-            : getVisibleScenes(session.id);
+        const scenes = membership.role === "gm"
+          ? getScenesForSession(session.id)
+          : getVisibleScenes(session.id);
 
-        const active_scene_id = activeScenesPerSession.get(session.id) ?? "";
+        const rawInvites = membership.role === "gm"
+          ? getInviteCodesForSession(session.id)
+          : [];
 
-        // Códigos de convite só são enviados para GMs
-        const invite_codes =
-          invite.role === "gm"
-            ? getInviteCodesForSession(session.id)
-            : { player: "", gm: "" };
+        const invite_codes = rawInvites
+          .map(toInviteSummary)
+          .filter((i): i is InviteCodeSummary => i !== null);
 
         send(ws, {
           type: "SESSION_JOINED",
           payload: {
             session_id: session.id,
             session_name: session.name,
-            member: { id: member.id, nickname, role: invite.role },
+            member: { id: membership.id, nickname: state.nickname, role: membership.role },
             invite_codes,
             scenes: scenes.map((s) => ({ ...s, is_visible: s.is_visible === 1 })),
-            active_scene_id,
+            active_scene_id: activeScenesPerSession.get(session.id) ?? "",
           },
         });
         return;
       }
 
-      // As mensagens abaixo exigem sessão ativa
+      // --- SESSION_ENTER (sessão que já é membro) ---
+      if (data.type === "SESSION_ENTER") {
+        const { session_id } = data.payload;
+
+        const membership = getMembership(state.user_id, session_id);
+        if (!membership) {
+          send(ws, { type: "SESSION_ERROR", payload: { message: "Você não é membro dessa sessão." } });
+          return;
+        }
+
+        const session = getSession(session_id);
+        if (!session) {
+          send(ws, { type: "SESSION_ERROR", payload: { message: "Sessão não encontrada." } });
+          return;
+        }
+
+        state.session_id = session.id;
+        state.role = membership.role;
+
+        const scenes = membership.role === "gm"
+          ? getScenesForSession(session.id)
+          : getVisibleScenes(session.id);
+
+        const rawInvites = membership.role === "gm"
+          ? getInviteCodesForSession(session.id)
+          : [];
+
+        const invite_codes = rawInvites
+          .map(toInviteSummary)
+          .filter((i): i is InviteCodeSummary => i !== null);
+
+        send(ws, {
+          type: "SESSION_JOINED",
+          payload: {
+            session_id: session.id,
+            session_name: session.name,
+            member: { id: membership.id, nickname: state.nickname, role: membership.role },
+            invite_codes,
+            scenes: scenes.map((s) => ({ ...s, is_visible: s.is_visible === 1 })),
+            active_scene_id: activeScenesPerSession.get(session.id) ?? "",
+          },
+        });
+        return;
+      }
+
       if (!state.session_id) {
-        console.warn("Mensagem recebida sem sessão ativa, ignorando.");
+        console.warn("Mensagem sem sessão ativa, ignorando.");
         return;
       }
 
       const session_id = state.session_id;
 
-      // --- SCENE_CREATE (GM only) ---
-      if (data.type === "SCENE_CREATE") {
+      // --- INVITE_CREATE (GM only) ---
+      if (data.type === "INVITE_CREATE") {
         if (state.role !== "gm") return;
 
-        const scene = createScene(session_id, data.payload.name);
+        const { role, max_uses, expires_at } = data.payload;
+        const code = createInviteCode({
+          sessionId: session_id,
+          role,
+          createdBy: state.user_id,
+          maxUses: max_uses,
+          expiresAt: expires_at,
+        });
 
+        const invite = getInviteCode(code);
+        const summary = toInviteSummary(invite);
+        if (!summary) return;
+
+        // Só envia para GMs da sessão
+        broadcastToSession(session_id, { type: "INVITE_CREATED", payload: summary });
+        return;
+      }
+
+      // --- INVITE_DELETE (GM only) ---
+      if (data.type === "INVITE_DELETE") {
+        if (state.role !== "gm") return;
+        deleteInviteCode(data.payload.code);
+        broadcastToSession(session_id, {
+          type: "INVITE_DELETED",
+          payload: { code: data.payload.code },
+        });
+        return;
+      }
+
+      // --- SCENE_CREATE ---
+      if (data.type === "SCENE_CREATE") {
+        if (state.role !== "gm") return;
+        const scene = createScene(session_id, data.payload.name);
         broadcastToSession(session_id, {
           type: "SCENE_CREATED",
           payload: { id: scene.id, name: scene.name, is_visible: false },
@@ -211,41 +346,28 @@ const start = async () => {
         const { scene_id } = data.payload;
         const scene = getScene(scene_id);
         if (!scene) return;
-
-        // Player só pode entrar em cenas visíveis
         if (state.role === "player" && !scene.is_visible) return;
-
+        if (state.role === "viewer" && !scene.is_visible) return;
         state.scene_id = scene_id;
-
         const tokens = getTokensForScene(scene_id);
-        send(ws, {
-          type: "SCENE_STATE",
-          payload: { scene_id, tokens },
-        });
+        send(ws, { type: "SCENE_STATE", payload: { scene_id, tokens } });
         return;
       }
 
-      // --- SCENE_PUSH (GM empurra cena para todos) ---
+      // --- SCENE_PUSH ---
       if (data.type === "SCENE_PUSH") {
         if (state.role !== "gm") return;
-
         const { scene_id } = data.payload;
         activeScenesPerSession.set(session_id, scene_id);
-
-        broadcastToSession(session_id, {
-          type: "SCENE_PUSHED",
-          payload: { scene_id },
-        });
+        broadcastToSession(session_id, { type: "SCENE_PUSHED", payload: { scene_id } });
         return;
       }
 
       // --- SCENE_SET_VISIBLE ---
       if (data.type === "SCENE_SET_VISIBLE") {
         if (state.role !== "gm") return;
-
         const { scene_id, visible } = data.payload;
         setSceneVisibility(scene_id, visible);
-
         broadcastToSession(session_id, {
           type: "SCENE_VISIBILITY_CHANGED",
           payload: { scene_id, visible },
@@ -253,14 +375,13 @@ const start = async () => {
         return;
       }
 
-      // --- TOKEN_CREATE_REQUEST ---
+      // --- TOKEN_CREATE_REQUEST (viewer não pode) ---
       if (data.type === "TOKEN_CREATE_REQUEST") {
+        if (state.role === "viewer") return;
         const { scene_id, x, y } = data.payload;
         const scene = getScene(scene_id);
         if (!scene || scene.session_id !== session_id) return;
-
         const token = createToken(scene_id, x, y);
-
         broadcastToScene(session_id, scene_id, {
           type: "TOKEN_CREATE",
           payload: { id: token.id, scene_id, x, y },
@@ -268,11 +389,11 @@ const start = async () => {
         return;
       }
 
-      // --- TOKEN_MOVE ---
+      // --- TOKEN_MOVE (viewer não pode) ---
       if (data.type === "TOKEN_MOVE") {
+        if (state.role === "viewer") return;
         const { id, x, y } = data.payload;
         moveToken(id, x, y);
-
         if (state.scene_id) {
           broadcastToScene(session_id, state.scene_id, {
             type: "TOKEN_MOVE",
