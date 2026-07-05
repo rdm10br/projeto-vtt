@@ -38,6 +38,14 @@ function resolveScenes(sessionId: string, role: Role) {
   return role === "gm" ? getScenesForSession(sessionId) : getVisibleScenes(sessionId);
 }
 
+export function resolveActiveSceneId(sessionId: string, role: Role, activeSceneId?: string) {
+  const scenes = resolveScenes(sessionId, role);
+  if (activeSceneId && scenes.some((scene) => scene.id === activeSceneId)) {
+    return activeSceneId;
+  }
+  return scenes[0]?.id;
+}
+
 export function buildSessionJoinedPayload(
   session: Session,
   membership: Membership,
@@ -47,6 +55,16 @@ export function buildSessionJoinedPayload(
   const scenes = resolveScenes(session.id, membership.role);
   const rawInviteCodes = membership.role === "gm" ? getInviteCodesForSession(session.id) : [];
 
+  const sceneList = scenes.map((scene) => ({
+    id: scene.id,
+    name: scene.name,
+    is_visible: scene.is_visible === 1,
+  }));
+
+  const active_scene_id = activeSceneId && sceneList.some((scene) => scene.id === activeSceneId)
+    ? activeSceneId
+    : "";
+
   return {
     session_id: session.id,
     session_name: session.name,
@@ -54,12 +72,8 @@ export function buildSessionJoinedPayload(
     invite_codes: rawInviteCodes
       .map(toInviteSummary)
       .filter((item): item is InviteCodeSummary => item !== null),
-    scenes: scenes.map((scene) => ({
-      id: scene.id,
-      name: scene.name,
-      is_visible: scene.is_visible === 1,
-    })),
-    active_scene_id: activeSceneId ?? "",
+    scenes: sceneList,
+    active_scene_id,
     chat: getChatMessagesForSession(session.id, membership.role, nickname),
   };
 }

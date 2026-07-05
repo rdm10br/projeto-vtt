@@ -21,6 +21,7 @@ import {
   createSessionForUser,
   enterSession,
   joinSessionByCode,
+  resolveActiveSceneId,
 } from "./services/sessionService.js";
 import { handleChatCommand } from "./services/chatService.js";
 import {
@@ -67,6 +68,11 @@ function broadcastToScene(
       send(client.ws, msg);
     }
   }
+}
+
+function sendSceneState(ws: WebSocket, scene_id: string) {
+  const sceneState = getSceneState(scene_id);
+  send(ws, { type: "SCENE_STATE", payload: sceneState });
 }
 
 function broadcastToSession(
@@ -245,10 +251,19 @@ const start = async () => {
         state.session_id = session.id;
         state.role = membership.role;
 
+        const activeSceneId = resolveActiveSceneId(session.id, membership.role, activeScenesPerSession.get(session.id));
+        if (activeSceneId) {
+          state.scene_id = activeSceneId;
+        }
+
         send(ws, {
           type: "SESSION_JOINED",
           payload: buildSessionJoinedPayload(session, membership, state.nickname, activeScenesPerSession.get(session.id)),
         });
+
+        if (activeSceneId) {
+          sendSceneState(ws, activeSceneId);
+        }
         return;
       }
 
@@ -266,10 +281,19 @@ const start = async () => {
         state.session_id = session.id;
         state.role = membership.role;
 
+        const activeSceneId = resolveActiveSceneId(session.id, membership.role, activeScenesPerSession.get(session.id));
+        if (activeSceneId) {
+          state.scene_id = activeSceneId;
+        }
+
         send(ws, {
           type: "SESSION_JOINED",
           payload: buildSessionJoinedPayload(session, membership, state.nickname, activeScenesPerSession.get(session.id)),
         });
+
+        if (activeSceneId) {
+          sendSceneState(ws, activeSceneId);
+        }
         return;
       }
 
@@ -357,7 +381,14 @@ const start = async () => {
         if (state.role !== "gm") return;
         const { scene_id } = data.payload;
         activeScenesPerSession.set(session_id, scene_id);
+        for (const client of clients) {
+          if (client.session_id === session_id) {
+            client.scene_id = scene_id;
+          }
+        }
         broadcastToSession(session_id, { type: "SCENE_PUSHED", payload: { scene_id } });
+        const sceneState = getSceneState(scene_id);
+        broadcastToSession(session_id, { type: "SCENE_STATE", payload: sceneState });
         return;
       }
 
