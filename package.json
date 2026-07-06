@@ -6,10 +6,14 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
-    "build:server": "cd apps/server && npm run build",
-    "dev:server": "cd apps/server && npm run build && npm run start",
-    "dev:client": "cd apps/client && npm run dev"
+    "build:server": "npm --workspace apps/server run build",
+    "dev:server": "npm --workspace apps/server run build && npm --workspace apps/server run start",
+    "dev:client": "npm --workspace apps/client run dev"
   },
+  "workspaces": [
+    "apps/client",
+    "apps/server"
+  ],
   "keywords": [],
   "author": "Rafael Dias",
   "license": "ISC",
@@ -21,6 +25,7 @@
   },
   "dependencies": {
     "@types/ws": "^8.18.1",
+    "better-sqlite3": "^12.11.1",
     "fastify": "^5.8.4",
     "pixi.js": "^8.17.1",
     "tsc-alias": "^1.8.16",
