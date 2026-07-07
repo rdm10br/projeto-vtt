@@ -27,8 +27,8 @@ const dragOffset = { x: 0, y: 0 };
 function createHighlight(token: PIXI.Graphics) {
   const highlight = new PIXI.Graphics();
   // use explicit lineStyle + drawRect to avoid mixing shorthand style properties
-  highlight.lineStyle(2, 0x000000, 1);
-  highlight.drawRect(0, 0, 50, 50);
+  highlight.setStrokeStyle({ width: 2, color: 0x000000, alpha: 1 });
+  highlight.rect(0, 0, 50, 50);
   highlight.visible = false;
   token.addChild(highlight);
   highlights.set(token, highlight);
