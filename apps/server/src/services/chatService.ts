@@ -18,8 +18,8 @@ export function getSessionChat(session_id: string, role: Role, requester: string
   return getChatMessagesForSession(session_id, role, requester);
 }
 
-export function buildMessage(text: string, sender: string, timestamp: number): ChatMessage {
-  return { sender, text, timestamp, message_type: "text", visible_to: "all" } as ChatMessage;
+export function buildMessage(id: string, text: string, sender: string, timestamp: number): ChatMessage {
+  return { id, sender, text, timestamp, message_type: "text", visible_to: "all" } as ChatMessage;
 }
 
 export function handleChatCommand(
@@ -49,8 +49,8 @@ export function handleChatCommand(
   }
 
   if (!rawText.startsWith("/")) {
-    createChatMessage(session_id, state.nickname, rawText, now);
-    sendGlobalMessage({ type: "CHAT_RECEIVE", payload: buildMessage(rawText, state.nickname, now) });
+    const created = createChatMessage(session_id, state.nickname, rawText, now);
+    sendGlobalMessage({ type: "CHAT_RECEIVE", payload: buildMessage(created.id, rawText, state.nickname, now) });
     return;
   }
 
@@ -109,8 +109,8 @@ export function handleChatCommand(
     const rollText = `${state.nickname} rolou ${rollDetails.dice}${modifier ? ` ${modifier >= 0 ? "+" : ""}${modifier}` : ""}${attribute ? ` ${attribute}` : ""}`;
     const fullText = `${rollText} → ${values.join(", ")} = ${total}`;
 
-    createChatMessage(session_id, state.nickname, fullText, now, "roll", undefined, rollDetails);
-    sendGlobalMessage({ type: "CHAT_RECEIVE", payload: { sender: state.nickname, text: fullText, timestamp: now, message_type: "roll", roll_details: rollDetails, visible_to: "all" } });
+    const createdRoll = createChatMessage(session_id, state.nickname, fullText, now, "roll", undefined, rollDetails);
+    sendGlobalMessage({ type: "CHAT_RECEIVE", payload: { id: createdRoll.id, sender: state.nickname, text: fullText, timestamp: now, message_type: "roll", roll_details: rollDetails, visible_to: "all" } });
     return;
   }
 
@@ -129,8 +129,8 @@ export function handleChatCommand(
     }
 
     const text = `(sussurro para ${targetNickname}) ${message}`;
-    createChatMessage(session_id, state.nickname, text, now, "whisper", targetNickname, { raw: message });
-    sendWhisperMessage({ type: "CHAT_RECEIVE", payload: { sender: state.nickname, text, timestamp: now, message_type: "whisper", target: targetNickname, visible_to: "sender-target" } }, targetNickname);
+    const createdWhisper = createChatMessage(session_id, state.nickname, text, now, "whisper", targetNickname, { raw: message });
+    sendWhisperMessage({ type: "CHAT_RECEIVE", payload: { id: createdWhisper.id, sender: state.nickname, text, timestamp: now, message_type: "whisper", target: targetNickname, visible_to: "sender-target" } }, targetNickname);
     return;
   }
 
@@ -147,8 +147,8 @@ export function handleChatCommand(
     }
 
     const text = `(secreto) ${message}`;
-    createChatMessage(session_id, state.nickname, text, now, "secret", undefined, { raw: message });
-    sendSecretMessage({ type: "CHAT_RECEIVE", payload: { sender: state.nickname, text, timestamp: now, message_type: "secret", visible_to: "gm" } });
+    const createdSecret = createChatMessage(session_id, state.nickname, text, now, "secret", undefined, { raw: message });
+    sendSecretMessage({ type: "CHAT_RECEIVE", payload: { id: createdSecret.id, sender: state.nickname, text, timestamp: now, message_type: "secret", visible_to: "gm" } });
     return;
   }
 

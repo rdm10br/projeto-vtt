@@ -136,34 +136,55 @@ export function SessionInfo({ session_id, sessionName, nickname, role, invite_co
   return (
     <>
       <div style={{ ...styles.panel, width: collapsed ? "48px" : `${width}px` }}>
-      <div style={styles.resizer} onMouseDown={startResize} />
-      <div style={styles.header}>
-        <div style={{ display: collapsed ? "none" : "flex", alignItems: "center", gap: "8px" }}>
-          <span style={styles.sessionName}>{sessionName}</span>
-          <span style={{ ...styles.badge, ...(role === "gm" ? styles.badgeGm : styles.badgePlayer) }}>
-            {roleLabel(role)}
-          </span>
+        <div style={styles.resizer} onMouseDown={startResize} />
+        <div style={styles.header}>
+          <div style={{ display: collapsed ? "none" : "flex", alignItems: "center", gap: "8px" }}>
+            <span style={styles.sessionName}>{sessionName}</span>
+            <span style={{ ...styles.badge, ...(role === "gm" ? styles.badgeGm : styles.badgePlayer) }}>
+              {roleLabel(role)}
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <button style={styles.collapseBtn} onClick={() => setCollapsed((s) => !s)}>{collapsed ? "›" : "‹"}</button>
+          </div>
         </div>
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <button style={styles.collapseBtn} onClick={() => setCollapsed((s) => !s)}>{collapsed ? "›" : "‹"}</button>
-        </div>
-      </div>
-      <span style={{ ...styles.nickname, display: collapsed ? "none" : undefined }}>{nickname}</span>
+        <span style={{ ...styles.nickname, display: collapsed ? "none" : undefined }}>{nickname}</span>
 
-      <div style={{ ...styles.tabBar, flexDirection: collapsed ? "column" : "row" }}>
-        {role === "gm" && (
+        <div style={{ ...styles.tabBar, flexDirection: collapsed ? "column" : "row" }}>
+          {role === "gm" && (
+            <div style={{ position: "relative", display: "inline-flex", alignItems: "center", marginRight: 8 }}>
+              <button
+                style={{ ...styles.tabBtn, ...(activeTab === "session" ? styles.tabActive : {}), ...(collapsed ? styles.tabCollapsed : {}) }}
+                onClick={() => setActiveTab("session")}
+              >
+                🗂 Sessão
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const next = detachedTab === "session" ? null : "session";
+                    setDetachedTab(next);
+                    if (next === "session") setActiveTab("chat");
+                  }}
+                  style={{ marginLeft: 8, color: "#9ca3af", cursor: "pointer", fontSize: 12 }}
+                  title="Destacar"
+                >
+                  ⤢
+                </span>
+              </button>
+            </div>
+          )}
           <div style={{ position: "relative", display: "inline-flex", alignItems: "center", marginRight: 8 }}>
             <button
-              style={{ ...styles.tabBtn, ...(activeTab === "session" ? styles.tabActive : {}), ...(collapsed ? styles.tabCollapsed : {}) }}
-              onClick={() => setActiveTab("session")}
+              style={{ ...styles.tabBtn, ...(activeTab === "tokens" ? styles.tabActive : {}), ...(collapsed ? styles.tabCollapsed : {}) }}
+              onClick={() => setActiveTab("tokens")}
             >
-              🗂 Sessão
+              🔷 Tokens
               <span
                 onClick={(e) => {
                   e.stopPropagation();
-                  const next = detachedTab === "session" ? null : "session";
+                  const next = detachedTab === "tokens" ? null : "tokens";
                   setDetachedTab(next);
-                  if (next === "session") setActiveTab("chat");
+                  if (next === "tokens") setActiveTab(role === "gm" ? "session" : "chat");
                 }}
                 style={{ marginLeft: 8, color: "#9ca3af", cursor: "pointer", fontSize: 12 }}
                 title="Destacar"
@@ -172,51 +193,30 @@ export function SessionInfo({ session_id, sessionName, nickname, role, invite_co
               </span>
             </button>
           </div>
-        )}
-        <div style={{ position: "relative", display: "inline-flex", alignItems: "center", marginRight: 8 }}>
-          <button
-            style={{ ...styles.tabBtn, ...(activeTab === "tokens" ? styles.tabActive : {}), ...(collapsed ? styles.tabCollapsed : {}) }}
-            onClick={() => setActiveTab("tokens")}
-          >
-            🔷 Tokens
-            <span
-              onClick={(e) => {
-                e.stopPropagation();
-                const next = detachedTab === "tokens" ? null : "tokens";
-                setDetachedTab(next);
-                if (next === "tokens") setActiveTab(role === "gm" ? "session" : "chat");
-              }}
-              style={{ marginLeft: 8, color: "#9ca3af", cursor: "pointer", fontSize: 12 }}
-              title="Destacar"
+          <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
+            <button
+              style={{ ...styles.tabBtn, ...(activeTab === "chat" ? styles.tabActive : {}), ...(collapsed ? styles.tabCollapsed : {}) }}
+              onClick={() => setActiveTab("chat")}
             >
-              ⤢
-            </span>
-          </button>
+              💬 Chat
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const next = detachedTab === "chat" ? null : "chat";
+                  setDetachedTab(next);
+                  if (next === "chat") setActiveTab(role === "gm" ? "session" : "tokens");
+                }}
+                style={{ marginLeft: 8, color: "#9ca3af", cursor: "pointer", fontSize: 12 }}
+                title="Destacar"
+              >
+                ⤢
+              </span>
+            </button>
+          </div>
         </div>
-        <div style={{ position: "relative", display: "inline-flex", alignItems: "center" }}>
-          <button
-            style={{ ...styles.tabBtn, ...(activeTab === "chat" ? styles.tabActive : {}), ...(collapsed ? styles.tabCollapsed : {}) }}
-            onClick={() => setActiveTab("chat")}
-          >
-            💬 Chat
-            <span
-              onClick={(e) => {
-                e.stopPropagation();
-                const next = detachedTab === "chat" ? null : "chat";
-                setDetachedTab(next);
-                if (next === "chat") setActiveTab(role === "gm" ? "session" : "tokens");
-              }}
-              style={{ marginLeft: 8, color: "#9ca3af", cursor: "pointer", fontSize: 12 }}
-              title="Destacar"
-            >
-              ⤢
-            </span>
-          </button>
-        </div>
-      </div>
 
-      {activeTab === "session" && detachedTab !== "session" && (
-        <div style={styles.codes}>
+        {activeTab === "session" && detachedTab !== "session" && (
+          <div style={styles.codes}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", flexWrap: "wrap" }}>
               <p style={styles.codesTitle}>Convites <span style={styles.activeCount}>({invite_codes.length} ativos)</span></p>
             </div>
@@ -245,66 +245,66 @@ export function SessionInfo({ session_id, sessionName, nickname, role, invite_co
               </button>
             </div>
 
-          {invite_codes.length > 0 ? (
-            invite_codes.map((inv) => (
-              <div key={inv.code} style={styles.codeRow}>
-                <span style={styles.codeLabel}>{roleLabel(inv.role)}</span>
-                <code style={styles.code}>{inv.code}</code>
-                <span style={styles.expiry}>
-                  {inv.use_count}/{inv.max_uses ?? "∞"} · {formatExpiry(inv.expires_at)}
-                </span>
-                <button style={styles.copyBtn} onClick={() => copy(inv.code, `code-${inv.code}`)}>
-                  {copied === `code-${inv.code}` ? "✓" : "Código"}
-                </button>
-                <button style={styles.copyBtn} onClick={() => copy(`${origin}/?join=${inv.code}`, `link-${inv.code}`)}>
-                  {copied === `link-${inv.code}` ? "✓" : "Link"}
-                </button>
-                <button style={styles.copyBtn} onClick={() => deleteInvite(inv.code)}>Excluir</button>
-              </div>
-            ))
-          ) : (
-            <div style={{ color: "#6b7280", fontSize: "12px", marginTop: "8px" }}>Nenhum convite ativo</div>
-          )}
-        </div>
-      )}
-
-      {activeTab === "tokens" && detachedTab !== "tokens" && (
-        <div style={{ marginTop: "8px" }}>
-          <p style={styles.codesTitle}>Tokens</p>
-          {role === "viewer" ? (
-            <div style={{ color: "#6b7280", fontSize: "12px" }}>Visualizadores não podem criar tokens</div>
-          ) : (
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-              <button
-                style={{ ...styles.copyBtn, background: "#aa3bff", color: "#fff", border: "none" }}
-                onClick={() => window.dispatchEvent(new CustomEvent("vtt-create-token"))}
-              >
-                ➕
-              </button>
-              <div style={{ color: "#9ca3af", fontSize: "12px" }}>Clique para criar um token centralizado</div>
-            </div>
-          )}
-        </div>
-      )}
-      {activeTab === "chat" && detachedTab !== "chat" && (
-        <div style={{ marginTop: "8px" }}>
-          <p style={styles.codesTitle}>Chat</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            <div style={{ maxHeight: "200px", overflowY: "auto", background: "#0f1115", padding: "8px", borderRadius: "6px" }}>
-              {(chat ?? []).map((m, i) => (
-                <div key={i} style={{ marginBottom: "6px", color: "#e5e7eb" }}>
-                  <strong style={{ color: "#93c5fd" }}>{m.sender}</strong>: <span>{m.text}</span>
+            {invite_codes.length > 0 ? (
+              invite_codes.map((inv) => (
+                <div key={inv.code} style={styles.codeRow}>
+                  <span style={styles.codeLabel}>{roleLabel(inv.role)}</span>
+                  <code style={styles.code}>{inv.code}</code>
+                  <span style={styles.expiry}>
+                    {inv.use_count}/{inv.max_uses ?? "∞"} · {formatExpiry(inv.expires_at)}
+                  </span>
+                  <button style={styles.copyBtn} onClick={() => copy(inv.code, `code-${inv.code}`)}>
+                    {copied === `code-${inv.code}` ? "✓" : "Código"}
+                  </button>
+                  <button style={styles.copyBtn} onClick={() => copy(`${origin}/?join=${inv.code}`, `link-${inv.code}`)}>
+                    {copied === `link-${inv.code}` ? "✓" : "Link"}
+                  </button>
+                  <button style={styles.copyBtn} onClick={() => deleteInvite(inv.code)}>Excluir</button>
                 </div>
-              ))}
-            </div>
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-              <input value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") sendChat(); }} placeholder="Digite mensagem" style={{ flex: 1, padding: "6px", borderRadius: "6px", border: "1px solid #2e303a", background: "#0f172a", color: "#f3f4f6" }} />
-              <button onClick={sendChat} style={{ ...styles.copyBtn, background: "#3b82f6", color: "#fff", border: "none" }}>Enviar</button>
+              ))
+            ) : (
+              <div style={{ color: "#6b7280", fontSize: "12px", marginTop: "8px" }}>Nenhum convite ativo</div>
+            )}
+          </div>
+        )}
+
+        {activeTab === "tokens" && detachedTab !== "tokens" && (
+          <div style={{ marginTop: "8px" }}>
+            <p style={styles.codesTitle}>Tokens</p>
+            {role === "viewer" ? (
+              <div style={{ color: "#6b7280", fontSize: "12px" }}>Visualizadores não podem criar tokens</div>
+            ) : (
+              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                <button
+                  style={{ ...styles.copyBtn, background: "#aa3bff", color: "#fff", border: "none" }}
+                  onClick={() => window.dispatchEvent(new CustomEvent("vtt-create-token"))}
+                >
+                  ➕
+                </button>
+                <div style={{ color: "#9ca3af", fontSize: "12px" }}>Clique para criar um token centralizado</div>
+              </div>
+            )}
+          </div>
+        )}
+        {activeTab === "chat" && detachedTab !== "chat" && (
+          <div style={{ marginTop: "8px" }}>
+            <p style={styles.codesTitle}>Chat</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <div style={{ maxHeight: "200px", overflowY: "auto", background: "#0f1115", padding: "8px", borderRadius: "6px" }}>
+                {(chat ?? []).map((m) => (
+                  <div key={m.id} style={{ marginBottom: "6px", color: "#e5e7eb" }}>
+                    <strong style={{ color: "#93c5fd" }}>{m.sender}</strong>: <span>{m.text}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                <input value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") sendChat(); }} placeholder="Digite mensagem" style={{ flex: 1, padding: "6px", borderRadius: "6px", border: "1px solid #2e303a", background: "#0f172a", color: "#f3f4f6" }} />
+                <button onClick={sendChat} style={{ ...styles.copyBtn, background: "#3b82f6", color: "#fff", border: "none" }}>Enviar</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
       {/* Detached floating panel */}
       {detachedTab && (
         <FloatingPanel onClose={() => setDetachedTab(null)} title={detachedTab}>
@@ -343,8 +343,10 @@ export function SessionInfo({ session_id, sessionName, nickname, role, invite_co
           {detachedTab === "chat" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               <div style={{ maxHeight: "300px", overflowY: "auto", background: "#0f1115", padding: "8px", borderRadius: "6px" }}>
-                {(chat ?? []).map((m, i) => (
-                  <div key={i} style={{ marginBottom: "6px", color: "#e5e7eb" }}><strong style={{ color: "#93c5fd" }}>{m.sender}</strong>: <span>{m.text}</span></div>
+                {(chat ?? []).map((m) => (
+                  <div key={m.id} style={{ marginBottom: "6px", color: "#e5e7eb" }}>
+                    <strong style={{ color: "#93c5fd" }}>{m.sender}</strong>: <span>{m.text}</span>
+                  </div>
                 ))}
               </div>
               <div style={{ display: "flex", gap: "8px" }}>

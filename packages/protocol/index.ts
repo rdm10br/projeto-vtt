@@ -72,6 +72,7 @@ export type RollDetails = {
 };
 
 export type ChatMessage = {
+  id: string;
   sender: string;
   text: string;
   timestamp: number;
