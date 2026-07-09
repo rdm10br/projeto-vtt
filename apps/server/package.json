@@ -13,9 +13,13 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@fastify/static": "^9.3.0",
     "better-sqlite3": "^12.11.1",
     "fastify": "^5.8.2",
     "ws": "^8.19.0"
+  },
+  "allowScripts": {
+    "better-sqlite3@12.11.1": true
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",

@@ -1,4 +1,7 @@
 import Fastify from "fastify";
+import fastifyStatic from "@fastify/static";
+import path from "path";
+import fs from "fs";
 import { WebSocketServer, WebSocket } from "ws";
 import type { ClientMessage, ServerMessage, InviteCodeSummary, CreateInvitePayload } from "../../../packages/protocol";
 import {
@@ -35,6 +38,31 @@ import {
 import { clientRegistry, type ClientState } from "./clientRegistry.js";
 
 const app = Fastify();
+
+function resolveClientDist(): string | null {
+  const candidates = [
+    path.join(__dirname, "../../../../client/dist"),
+    path.join(__dirname, "../../../client/dist"),
+    path.join(process.cwd(), "../client/dist"),
+    path.join(process.cwd(), "apps/client/dist"),
+  ];
+  return candidates.find((p) => fs.existsSync(path.join(p, "index.html"))) ?? null;
+}
+
+const clientDist = resolveClientDist();
+if (clientDist) {
+  app.register(fastifyStatic, { root: clientDist });
+  app.setNotFoundHandler((request, reply) => {
+    if (request.raw.url?.startsWith("/backup")) {
+      reply.code(404).send({ error: "not found" });
+      return;
+    }
+    reply.sendFile("index.html");
+  });
+  console.log(`Servindo client estático de: ${clientDist}`);
+} else {
+  console.warn("Build do client não encontrado — rode `npm run build` em apps/client.");
+}
 
 const activeScenesPerSession = new Map<string, string>();
 
@@ -355,7 +383,8 @@ const start = async () => {
     return { session_id: result.session.id, session_name: result.session.name, invite_codes: result.invite_codes };
   });
 
-  await app.listen({ port: PORT });
+  // await app.listen({ port: PORT });
+  await app.listen({ port: PORT, host: "0.0.0.0" });
   console.log(`HTTP server rodando na porta ${PORT}`);
 
   const wss = new WebSocketServer({ server: app.server });
