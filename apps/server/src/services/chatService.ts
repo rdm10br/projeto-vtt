@@ -1,5 +1,5 @@
-import type { Role } from "../db.js";
-import { createChatMessage, getChatMessagesForSession, getMembersForSession } from "../db.js";
+import type { Role } from "../db";
+import { createChatMessage, getChatMessagesForSession, getMembersForSession } from "../db";
 import type { ServerMessage, ChatMessage } from "../../../../packages/protocol";
 import type { WebSocket } from "ws";
 

@@ -1,6 +1,6 @@
 {
-    "files.autoSave": "afterDelay",
-    "editor.formatOnSave": true,
-    "explorer.compactFolders": false,
     "editor.tabSize": 2,
+    "editor.formatOnSave": true,
+    "files.autoSave": "afterDelay",
+    "explorer.compactFolders": false,
 }

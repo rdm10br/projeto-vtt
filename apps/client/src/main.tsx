@@ -135,7 +135,7 @@ function handleGameMessage(data: ServerMessage) {
 // --- Socket ---
 // const socket = new SocketManager("ws://localhost:3000");
 const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-const wsUrl = `${wsProtocol}//${window.location.host}`;
+const wsUrl = import.meta.env.VITE_WS_URL ?? `${wsProtocol}//${window.location.host}`;
 const socket = new SocketManager(wsUrl);
 socket.setGameHandler(handleGameMessage);
 

@@ -1,5 +1,5 @@
 import type { InviteCodeSummary, Role, SessionJoinedPayload } from "../../../../packages/protocol/index.ts";
-import type { InviteCode, Membership, Session } from "../db.js";
+import type { Membership, Session } from "../db";
 import {
   createMembership,
   createSession,
@@ -11,7 +11,8 @@ import {
   getVisibleScenes,
   getScenesForSession,
   useInviteCode,
-} from "../db.js";
+} from "../db";
+import { toInviteSummary } from "./inviteService.js";
 
 export type SessionJoinResult = {
   session: Session;
@@ -22,17 +23,17 @@ export type SessionJoinOutcome =
   | { error: string }
   | { result: SessionJoinResult };
 
-function toInviteSummary(inv: InviteCode | undefined): InviteCodeSummary | null {
-  if (!inv) return null;
-  return {
-    code: inv.code,
-    role: inv.role,
-    use_count: inv.use_count,
-    max_uses: inv.max_uses,
-    expires_at: inv.expires_at,
-    created_at: inv.created_at,
-  };
-}
+// function toInviteSummary(inv: InviteCode | undefined): InviteCodeSummary | null {
+  // if (!inv) return null;
+  // return {
+    // code: inv.code,
+    // role: inv.role,
+    // use_count: inv.use_count,
+    // max_uses: inv.max_uses,
+    // expires_at: inv.expires_at,
+    // created_at: inv.created_at,
+  // };
+// }
 
 function resolveScenes(sessionId: string, role: Role) {
   return role === "gm" ? getScenesForSession(sessionId) : getVisibleScenes(sessionId);

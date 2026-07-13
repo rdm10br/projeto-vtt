@@ -10,6 +10,7 @@ type LobbyProps = {
   onSessionCreate: (name: string) => void;
   onSessionJoin: (code: string) => void;
   onSessionEnter: (session_id: string) => void;
+  onLogout: () => void;
 };
 
 export function Lobby({
@@ -19,6 +20,7 @@ export function Lobby({
   onSessionCreate,
   onSessionJoin,
   onSessionEnter,
+  onLogout
 }: LobbyProps) {
   const [tab, setTab] = useState<Tab>("create");
   const [sessionName, setSessionName] = useState("");
@@ -44,7 +46,10 @@ export function Lobby({
       <div style={styles.card}>
         <div style={styles.header}>
           <h1 style={styles.title}>⚔️ VTT</h1>
-          <span style={styles.nickname}>Olá, {nickname}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <span style={styles.nickname}>Olá, {nickname}</span>
+            <button style={styles.logoutBtn} onClick={onLogout}>Sair</button>
+          </div>
         </div>
 
         {/* Sessões existentes */}
@@ -267,5 +272,14 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: "15px",
     fontWeight: 600,
     cursor: "pointer",
+  },
+  logoutBtn: {
+    padding: "4px 10px",
+    background: "transparent",
+    border: "1px solid #2e303a",
+    borderRadius: "6px",
+    color: "#9ca3af",
+    cursor: "pointer",
+    fontSize: "12px",
   },
 };

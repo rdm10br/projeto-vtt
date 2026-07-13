@@ -1,5 +1,5 @@
-import type { Role } from "../db.js";
-import { createScene, getScene, setSceneVisibility, createToken, getTokensForScene, moveToken } from "../db.js";
+import type { Role } from "../db";
+import { createScene, getScene, setSceneVisibility, createToken, getTokensForScene, moveToken } from "../db";
 
 export function createSceneForSession(sessionId: string, name: string) {
   const scene = createScene(sessionId, name);

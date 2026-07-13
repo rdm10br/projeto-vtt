@@ -38,6 +38,14 @@ export function App({ socket, onSessionJoined }: AppProps) {
 
   const joinCodeFromUrl = new URLSearchParams(window.location.search).get("join");
 
+  function handleLogout() {
+    localStorage.removeItem(NICKNAME_KEY);
+    setUser(null);
+    setUserError(null);
+    setSessionError(null);
+    setScreen("login");
+  }
+
   useEffect(() => {
     socket.connect((data: ServerMessage) => {
       if (data.type === "CONNECTED") {
@@ -159,6 +167,7 @@ export function App({ socket, onSessionJoined }: AppProps) {
           setSessionError(null);
           socket.send({ type: "SESSION_ENTER", payload: { session_id } });
         }}
+        onLogout={handleLogout}
       />
     );
   }
