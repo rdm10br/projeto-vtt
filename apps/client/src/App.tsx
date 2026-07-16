@@ -22,7 +22,7 @@ type SessionData = {
   chat?: ChatMessage[];
 };
 
-const NICKNAME_KEY = "vtt_nickname";
+import { getSavedNickname, saveNickname, clearNickname } from "./network/authStorage";
 
 type AppProps = {
   socket: SocketManager;
@@ -39,7 +39,7 @@ export function App({ socket, onSessionJoined }: AppProps) {
   const joinCodeFromUrl = new URLSearchParams(window.location.search).get("join");
 
   function handleLogout() {
-    localStorage.removeItem(NICKNAME_KEY);
+    clearNickname();
     setUser(null);
     setUserError(null);
     setSessionError(null);
@@ -50,7 +50,7 @@ export function App({ socket, onSessionJoined }: AppProps) {
     socket.connect((data: ServerMessage) => {
       if (data.type === "CONNECTED") {
         // Tenta relogar automaticamente com nickname salvo
-        const saved = localStorage.getItem(NICKNAME_KEY);
+        const saved = getSavedNickname();
         if (saved) {
           socket.send({ type: "USER_LOGIN", payload: { nickname: saved } });
         }
@@ -59,7 +59,7 @@ export function App({ socket, onSessionJoined }: AppProps) {
 
       if (data.type === "USER_STATE") {
         const { user_id, nickname, sessions } = data.payload;
-        localStorage.setItem(NICKNAME_KEY, nickname);
+        saveNickname(nickname);
         setUser({ user_id, nickname, sessions });
 
         // Se veio via link de convite, entra direto
