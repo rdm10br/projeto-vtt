@@ -2,6 +2,7 @@ import { spawnSync, spawn } from "child_process";
 import { existsSync } from "fs";
 import { fileURLToPath } from "url";
 import path from "path";
+import { bin as cloudflaredBin, install as installCloudflared } from "cloudflared";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.join(__dirname, "..");
@@ -31,7 +32,15 @@ if (!existsSync(SERVER_ENTRY)) {
   console.log("✓ Build do server já existe, pulando.");
 }
 
-// --- Passo 2: sobe o server ---
+// --- Passo 2: garante que o binário do cloudflared está instalado ---
+if (!existsSync(cloudflaredBin)) {
+  console.log("\n▶ Binário do cloudflared ausente — baixando...");
+  await installCloudflared(cloudflaredBin);
+} else {
+  console.log("✓ Binário do cloudflared já existe, pulando download.");
+}
+
+// --- Passo 3: sobe o server ---
 console.log("\n▶ Iniciando server...");
 const server = spawn("node", [SERVER_ENTRY], { cwd: rootDir, stdio: "inherit" });
 
@@ -41,11 +50,10 @@ server.on("exit", (code) => {
   process.exit(code ?? 0);
 });
 
-// --- Passo 3: sobe o túnel Cloudflare, capturando a URL gerada ---
+// --- Passo 4: sobe o túnel Cloudflare, capturando a URL gerada ---
 console.log("▶ Iniciando túnel Cloudflare...\n");
-const tunnel = spawn("cloudflared", ["tunnel", "--url", "http://localhost:3000"], {
+const tunnel = spawn(cloudflaredBin, ["tunnel", "--url", "http://localhost:3000"], {
   cwd: rootDir,
-  shell: true,
 });
 
 let urlShown = false;
@@ -53,7 +61,7 @@ const urlRegex = /https:\/\/[a-zA-Z0-9.-]+\.trycloudflare\.com/;
 
 function handleTunnelOutput(chunk) {
   const text = chunk.toString();
-  process.stdout.write(text); // mantém o log completo visível também
+  process.stdout.write(text);
 
   if (!urlShown) {
     const match = text.match(urlRegex);
@@ -70,7 +78,7 @@ tunnel.stdout.on("data", handleTunnelOutput);
 tunnel.stderr.on("data", handleTunnelOutput);
 
 tunnel.on("error", (err) => {
-  console.error("\n✗ Não foi possível iniciar o cloudflared. Ele está instalado e no PATH?");
+  console.error("\n✗ Não foi possível iniciar o cloudflared.");
   console.error(err.message);
 });
 
@@ -80,7 +88,6 @@ tunnel.on("exit", (code) => {
   }
 });
 
-// --- Encerramento limpo com Ctrl+C ---
 process.on("SIGINT", () => {
   console.log("\n▶ Encerrando server e túnel...");
   server.kill();

@@ -8,8 +8,10 @@ import { getSessionBackup, importSessionBackup, type SessionBackup } from "./db"
 import { clientRegistry, type ClientState } from "./clientRegistry.js";
 import { dispatch } from "./ws/dispatch.js";
 import { send } from "./ws/broadcast.js";
+import { randomUUID } from "crypto";
 
 const app = Fastify();
+const BOOT_ID = randomUUID();
 
 function resolveClientDist(): string | null {
   const candidates = [
@@ -38,7 +40,8 @@ if (clientDist) {
   console.warn("Build do client não encontrado — rode `npm run build` em apps/client.");
 }
 
-app.get("/", async () => ({ status: "ok" }));
+// app.get("/", async () => ({ status: "ok" }));
+app.get("/health", async () => ({ status: "ok" }));
 
 const start = async () => {
   const PORT = 3000;
@@ -82,7 +85,8 @@ const start = async () => {
     };
 
     clientRegistry.add(state);
-    send(ws, { type: "CONNECTED" });
+    // send(ws, { type: "CONNECTED" });
+    send(ws, { type: "CONNECTED", payload: { boot_id: BOOT_ID } });
 
     ws.on("message", (raw) => {
       const text = raw.toString();

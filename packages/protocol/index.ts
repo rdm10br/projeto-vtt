@@ -104,7 +104,7 @@ export type ClientMessage =
 // --- Mensagens Server → Client ---
 
 export type ServerMessage =
-  | { type: "CONNECTED" }
+  | { type: "CONNECTED"; payload: { boot_id: string } }
   | { type: "USER_STATE"; payload: { user_id: string; nickname: string; sessions: SessionSummary[] } }
   | { type: "USER_ERROR"; payload: { message: string } }
   | { type: "SESSION_JOINED"; payload: SessionJoinedPayload }

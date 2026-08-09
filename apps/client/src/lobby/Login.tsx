@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { isRememberEnabled, setRememberEnabled } from "../network/authStorage";
 
 type LoginProps = {
   onLogin: (nickname: string) => void;
@@ -8,10 +9,12 @@ type LoginProps = {
 export function Login({ onLogin, error }: LoginProps) {
   const [nickname, setNickname] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
+  const [remember, setRemember] = useState(isRememberEnabled());
 
   function handle() {
     if (!nickname.trim()) { setLocalError("Digite um apelido."); return; }
     setLocalError(null);
+    setRememberEnabled(remember);
     onLogin(nickname.trim());
   }
 
@@ -35,6 +38,15 @@ export function Login({ onLogin, error }: LoginProps) {
         {(localError || error) && (
           <p style={styles.error}>{localError || error}</p>
         )}
+
+        <label style={styles.checkboxRow}>
+          <input
+            type="checkbox"
+            checked={remember}
+            onChange={(e) => setRemember(e.target.checked)}
+          />
+          Lembrar login neste dispositivo
+        </label>
 
         <button style={styles.btn} onClick={handle}>
           Entrar
@@ -107,4 +119,12 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     cursor: "pointer",
   },
+  checkboxRow: {
+  display: "flex",
+  alignItems: "center",
+  gap: "8px",
+  color: "#9ca3af",
+  fontSize: "13px",
+  cursor: "pointer",
+},
 };

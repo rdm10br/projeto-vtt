@@ -22,7 +22,14 @@ type SessionData = {
   chat?: ChatMessage[];
 };
 
-import { getSavedNickname, saveNickname, clearNickname } from "./network/authStorage";
+import {
+  getSavedNickname,
+  saveNickname,
+  clearNickname,
+  getSavedBootId,
+  saveBootId,
+  clearBootId,
+} from "./network/authStorage";
 
 type AppProps = {
   socket: SocketManager;
@@ -40,6 +47,7 @@ export function App({ socket, onSessionJoined }: AppProps) {
 
   function handleLogout() {
     clearNickname();
+    clearBootId();
     setUser(null);
     setUserError(null);
     setSessionError(null);
@@ -47,30 +55,40 @@ export function App({ socket, onSessionJoined }: AppProps) {
   }
 
   useEffect(() => {
+    let currentBootId: string | null = null;
+
     socket.connect((data: ServerMessage) => {
       if (data.type === "CONNECTED") {
-        // Tenta relogar automaticamente com nickname salvo
-        const saved = getSavedNickname();
-        if (saved) {
-          socket.send({ type: "USER_LOGIN", payload: { nickname: saved } });
-        }
-        return;
+      currentBootId = data.payload.boot_id;
+      const savedBootId = getSavedBootId();
+      const saved = getSavedNickname();
+
+      if (saved && savedBootId === currentBootId) {
+        // Mesmo servidor de antes (boot_id bate) — relogin automático.
+        socket.send({ type: "USER_LOGIN", payload: { nickname: saved } });
+      } else {
+        // Servidor reiniciou desde o último login salvo (ou nunca logamos aqui) — força login manual.
+        clearNickname();
+        clearBootId();
       }
+      return;
+    }
 
       if (data.type === "USER_STATE") {
-        const { user_id, nickname, sessions } = data.payload;
-        saveNickname(nickname);
-        setUser({ user_id, nickname, sessions });
+      const { user_id, nickname, sessions } = data.payload;
+      saveNickname(nickname);
+      if (currentBootId) saveBootId(currentBootId);
+      setUser({ user_id, nickname, sessions });
 
-        // Se veio via link de convite, entra direto
-        if (joinCodeFromUrl) {
-          socket.send({ type: "SESSION_JOIN", payload: { code: joinCodeFromUrl } });
-          return;
-        }
-
-        setScreen("lobby");
+      // Se veio via link de convite, entra direto
+      if (joinCodeFromUrl) {
+        socket.send({ type: "SESSION_JOIN", payload: { code: joinCodeFromUrl } });
         return;
       }
+
+      setScreen("lobby");
+      return;
+    }
 
       if (data.type === "USER_ERROR") {
         setUserError(data.payload.message);
